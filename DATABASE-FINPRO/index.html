@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="id">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Smart Medicine | Apotek Dashboard</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-icon">+</div>
+          <div>
+            <p class="brand-kicker">Healthcare</p>
+            <h2>Smart Medicine</h2>
+          </div>
+        </div>
+
+        <nav class="nav">
+          <button class="nav-item active" data-view="dashboard">Dashboard</button>
+          <button class="nav-item" data-view="inventory">Inventory</button>
+          <button class="nav-item" data-view="sales">Sales</button>
+          <button class="nav-item" data-view="suppliers">Suppliers</button>
+          <button class="nav-item" data-view="reports">Reports</button>
+        </nav>
+
+        <div class="sidebar-card">
+          <p class="card-label">Today</p>
+          <h3>Prescriptions</h3>
+          <strong id="prescriptionCount">24</strong>
+          <span>Need review</span>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Apotek dashboard</p>
+            <h1>Smart Medicine</h1>
+          </div>
+          <div class="header-actions">
+            <div class="search-wrap">
+              <span>⌕</span>
+              <input id="searchInput" type="search" placeholder="Cari obat atau kategori" />
+            </div>
+            <button id="addMedicineBtn" class="primary-btn">+ Obat Baru</button>
+          </div>
+        </header>
+
+        <section class="page-section active" data-page="dashboard">
+          <div class="stats-grid">
+            <article class="stat-card accent-green">
+              <div class="stat-head">
+                <span>Total Obat</span>
+                <span class="chip success">Live</span>
+              </div>
+              <h2 id="totalMedicine">0</h2>
+              <small id="medicineValue">Rp 0</small>
+            </article>
+
+            <article class="stat-card accent-blue">
+              <div class="stat-head">
+                <span>Penjualan Hari Ini</span>
+                <span class="chip info">+8.4%</span>
+              </div>
+              <h2 id="dailySales">0</h2>
+              <small>Transaksi: <strong id="transactionCount">0</strong></small>
+            </article>
+
+            <article class="stat-card accent-orange">
+              <div class="stat-head">
+                <span>Stok Rendah</span>
+                <span class="chip warning">Urgent</span>
+              </div>
+              <h2 id="lowStockCount">0</h2>
+              <small>Perlu restock</small>
+            </article>
+
+            <article class="stat-card accent-purple">
+              <div class="stat-head">
+                <span>Pendapatan</span>
+                <span class="chip purple">Monthly</span>
+              </div>
+              <h2 id="revenueValue">Rp 0</h2>
+              <small>Target 92%</small>
+            </article>
+          </div>
+
+          <div class="content-grid">
+            <div class="panel panel-wide">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Inventory</p>
+                  <h3>Daftar Obat</h3>
+                </div>
+              </div>
+
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nama</th>
+                      <th>Kategori</th>
+                      <th>Tanggal Masuk</th>
+                      <th>Expired</th>
+                      <th>Stok</th>
+                      <th>Harga</th>
+                      <th>Status</th>
+                      <th>Aksi</th>
+                    </tr>
+                  </thead>
+                  <tbody id="medicineTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="panel side-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Alert</p>
+                  <h3>Stok Rendah</h3>
+                </div>
+              </div>
+              <div id="lowStockList" class="alert-list"></div>
+            </div>
+          </div>
+
+          <div class="panel log-panel">
+            <div class="panel-header">
+              <div>
+                <p class="section-label">Log</p>
+                <h3>Aktivitas Inventaris</h3>
+              </div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Tanggal</th>
+                    <th>Jenis</th>
+                    <th>Obat</th>
+                    <th>Jumlah</th>
+                    <th>Catatan</th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryLogTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="receipt-section">
+            <div class="panel receipt-panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Receipt</p>
+                  <h3>Struk Pembelian</h3>
+                </div>
+              </div>
+
+              <div class="receipt-grid">
+                <div class="receipt-card conventional">
+                  <h4>Struk Konvensional</h4>
+                  <div id="receiptConventional" class="receipt-output"></div>
+                </div>
+
+                <div class="receipt-card digital">
+                  <h4>Struk Digital</h4>
+                  <div id="receiptDigital" class="receipt-output"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page-section" data-page="inventory">
+          <div class="panel inventory-panel">
+            <div class="panel-header">
+              <div>
+                <p class="section-label">System</p>
+                <h3>Inventory Management</h3>
+              </div>
+              <div class="inventory-actions">
+                <button id="restockBtn" class="secondary-btn">+ Restok</button>
+                <button id="saleBtn" class="secondary-btn">- Penjualan</button>
+              </div>
+            </div>
+
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Nama</th>
+                    <th>Kategori</th>
+                    <th>Tanggal Masuk</th>
+                    <th>Expired</th>
+                    <th>Stok</th>
+                    <th>Harga</th>
+                    <th>Status</th>
+                    <th>Aksi</th>
+                  </tr>
+                </thead>
+                <tbody id="inventoryTableBody"></tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <section class="page-section" data-page="sales">
+          <div class="grid-two">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Transaction</p>
+                  <h3>Penjualan Obat</h3>
+                </div>
+              </div>
+
+              <form id="saleForm" class="stack-form">
+                <label>
+                  <span>Nama Pelanggan</span>
+                  <input id="customerName" type="text" placeholder="Andi / Umum" />
+                </label>
+                <label>
+                  <span>Pilih Obat</span>
+                  <select id="saleMedicineSelect"></select>
+                </label>
+                <label>
+                  <span>Jumlah</span>
+                  <input id="saleQuantity" type="number" min="1" value="1" required />
+                </label>
+                <button type="submit" class="primary-btn">Tambah ke Transaksi</button>
+              </form>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Receipt</p>
+                  <h3>Preview Struk</h3>
+                </div>
+              </div>
+              <div id="saleReceiptPreview" class="receipt-output"></div>
+            </div>
+          </div>
+        </section>
+
+        <section class="page-section" data-page="suppliers">
+          <div class="grid-two">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Supplier</p>
+                  <h3>Daftar Supplier</h3>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Nama</th>
+                      <th>Kontak</th>
+                      <th>Alamat</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="supplierTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">New</p>
+                  <h3>Tambah Supplier</h3>
+                </div>
+              </div>
+              <form id="supplierForm" class="stack-form">
+                <label>
+                  <span>Nama Supplier</span>
+                  <input id="supplierName" type="text" required />
+                </label>
+                <label>
+                  <span>Kontak</span>
+                  <input id="supplierContact" type="text" required />
+                </label>
+                <label>
+                  <span>Alamat</span>
+                  <textarea id="supplierAddress" rows="4" required></textarea>
+                </label>
+                <button type="submit" class="primary-btn">Simpan Supplier</button>
+              </form>
+            </div>
+          </div>
+        </section>
+
+        <section class="page-section" data-page="reports">
+          <div class="report-grid">
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">Summary</p>
+                  <h3>Laporan</h3>
+                </div>
+              </div>
+              <div class="report-list" id="reportSummaryList"></div>
+            </div>
+
+            <div class="panel">
+              <div class="panel-header">
+                <div>
+                  <p class="section-label">History</p>
+                  <h3>Transaksi Terbaru</h3>
+                </div>
+              </div>
+              <div class="table-wrap">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Tanggal</th>
+                      <th>Pelanggan</th>
+                      <th>Total</th>
+                    </tr>
+                  </thead>
+                  <tbody id="salesHistoryBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <div class="modal hidden" id="medicineModal" aria-hidden="true">
+      <div class="modal-backdrop" data-close="true"></div>
+      <div class="modal-dialog" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+        <div class="modal-header">
+          <div>
+            <p class="section-label">Form Obat</p>
+            <h3 id="modalTitle">Tambah Obat</h3>
+          </div>
+          <button class="icon-btn" id="closeModalBtn" aria-label="Tutup">✕</button>
+        </div>
+
+        <form id="medicineForm">
+          <input type="hidden" id="medicineId" />
+
+          <div class="form-grid">
+            <label>
+              <span>Nama Obat</span>
+              <input id="medicineName" type="text" placeholder="Paracetamol" required />
+            </label>
+            <label>
+              <span>Kategori</span>
+              <select id="medicineCategory">
+                <option value="Analgesik">Analgesik</option>
+                <option value="Antibiotik">Antibiotik</option>
+                <option value="Vitamin">Vitamin</option>
+                <option value="Antiseptik">Antiseptik</option>
+                <option value="Obat Batuk">Obat Batuk</option>
+              </select>
+            </label>
+            <label>
+              <span>Tanggal Masuk</span>
+              <input id="medicineEntryDate" type="date" required />
+            </label>
+            <label>
+              <span>Expired</span>
+              <input id="medicineExpiry" type="date" required />
+            </label>
+            <label>
+              <span>Stok</span>
+              <input id="medicineStock" type="number" min="0" placeholder="50" required />
+            </label>
+            <label>
+              <span>Harga</span>
+              <input id="medicinePrice" type="number" min="0" step="100" placeholder="8500" required />
+            </label>
+            <label>
+              <span>Status</span>
+              <select id="medicineStatus">
+                <option value="Tersedia">Tersedia</option>
+                <option value="Stok Rendah">Stok Rendah</option>
+                <option value="Habis">Habis</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="secondary-btn" id="cancelBtn">Batal</button>
+            <button type="submit" class="primary-btn">Simpan</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="script.js"></script>
+  </body>
+</html>
