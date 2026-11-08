@@ -300,12 +300,8 @@
                     <input id="customerName" type="text" placeholder="Andi / Umum" />
                   </label>
                   <label>
-                    <span>Pilih Obat</span>
-                    <select id="saleMedicineSelect"></select>
-                  </label>
-                  <label>
-                    <span>Jumlah</span>
-                    <input id="saleQuantity" type="number" min="1" value="1" required />
+                    <span>No. Telepon</span>
+                    <input id="customerPhone" type="tel" placeholder="0812xxxxxxxx" />
                   </label>
                   <label>
                     <span>Metode Bayar</span>
@@ -316,8 +312,28 @@
                       <option value="Bank Transfer">Bank Transfer</option>
                     </select>
                   </label>
-                  <button type="submit" class="primary-btn">Simpan Transaksi Offline</button>
+
+                  <button type="submit" class="primary-btn full-width sale-submit-btn">Simpan Transaksi</button>
                 </form>
+
+                <div class="admin-cart-panel">
+                  <div class="panel-header compact-header">
+                    <div>
+                      <p class="section-label">Cart</p>
+                      <h3>Daftar Barang</h3>
+                    </div>
+                  </div>
+
+                  <div id="adminCartList" class="cart-list admin-cart-list"></div>
+
+                  <div class="cart-summary sale-cart-summary">
+                    <div>
+                      <span>Total</span>
+                      <strong id="saleCartTotal">Rp 0</strong>
+                    </div>
+                    <button id="clearSaleCartBtn" type="button" class="secondary-btn">Reset</button>
+                  </div>
+                </div>
               </div>
 
               <div class="panel">

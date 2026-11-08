@@ -73,6 +73,10 @@ const saleMedicineSelect = document.getElementById("saleMedicineSelect");
 const saleQuantity = document.getElementById("saleQuantity");
 const salePaymentMethod = document.getElementById("salePaymentMethod");
 const customerName = document.getElementById("customerName");
+const customerPhone = document.getElementById("customerPhone");
+const adminCartList = document.getElementById("adminCartList");
+const saleCartTotal = document.getElementById("saleCartTotal");
+const clearSaleCartBtn = document.getElementById("clearSaleCartBtn");
 const saleReceiptPreview = document.getElementById("saleReceiptPreview");
 const customerSearch = document.getElementById("customerSearch");
 const customerProductList = document.getElementById("customerProductList");
@@ -133,6 +137,7 @@ let customerPurchaseHistory = loadState(STORAGE_KEYS.customerPurchases, []);
 let inventoryLogs = loadState(STORAGE_KEYS.logs, seedLogs);
 let currentReceipt = transactions[0] || null;
 let customerCart = [];
+let adminCart = [];
 let currentAdminView = "dashboard";
 let currentRole = "admin";
 
@@ -391,7 +396,7 @@ function renderCustomerProducts() {
           </div>
           <div class="product-meta">
             <span>${formatCurrency(item.price)}</span>
-            <button class="primary-btn product-btn" data-customer-product="${item.id}" ${disabled}>${inCartQty ? `Tambah (${inCartQty})` : "Tambah"}</button>
+            <button class="primary-btn product-btn" data-customer-product="${item.id}" ${disabled} type="button">${inCartQty ? `Tambah (${inCartQty})` : "Tambah"}</button>
           </div>
         </article>
       `;
@@ -797,6 +802,100 @@ function renderReceipts() {
   saleReceiptPreview.innerHTML = buildDigitalReceiptMarkup(receipt);
 }
 
+function renderAdminCart() {
+  if (!adminCartList || !saleCartTotal) return;
+
+  if (!adminCart.length) {
+    adminCartList.innerHTML = '<div class="empty-state">Belum ada barang yang dipilih.</div>';
+    saleCartTotal.textContent = formatCurrency(0);
+    return;
+  }
+
+  adminCartList.innerHTML = adminCart
+    .map(
+      (item) => `
+        <div class="cart-item">
+          <div>
+            <strong>${item.name}</strong>
+            <small>${formatCurrency(item.price)} / pcs • ${formatDate(item.expiry)}</small>
+          </div>
+          <div class="cart-item-actions">
+            <button class="icon-btn minus-btn" data-admin-cart-action="decrease" data-id="${item.id}" type="button">-</button>
+            <span>${item.qty}</span>
+            <button class="icon-btn plus-btn" data-admin-cart-action="increase" data-id="${item.id}" type="button">+</button>
+          </div>
+        </div>
+      `
+    )
+    .join("");
+
+  const total = adminCart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  saleCartTotal.textContent = formatCurrency(total);
+}
+
+function addAdminCartItem(medicineId, quantity = 1) {
+  const medicine = medicines.find((item) => item.id === Number(medicineId));
+  if (!medicine) return;
+
+  const requestedQty = Number(quantity) || 1;
+  if (!Number.isFinite(requestedQty) || requestedQty <= 0) {
+    alert("Jumlah barang harus lebih dari 0.");
+    return;
+  }
+
+  if (Number(medicine.stock || 0) <= 0) {
+    alert("Stok obat sudah habis.");
+    return;
+  }
+
+  const existingItem = adminCart.find((item) => item.id === medicine.id);
+  const nextQty = (existingItem ? existingItem.qty : 0) + requestedQty;
+
+  if (nextQty > Number(medicine.stock || 0)) {
+    alert(`Stok untuk ${medicine.name} hanya tersisa ${medicine.stock}.`);
+    return;
+  }
+
+  if (existingItem) {
+    existingItem.qty = nextQty;
+  } else {
+    adminCart.push({ id: medicine.id, name: medicine.name, price: medicine.price, expiry: medicine.expiry, qty: requestedQty });
+  }
+
+  renderAdminCart();
+  if (saleMedicineSelect) {
+    saleMedicineSelect.value = String(medicine.id);
+  }
+}
+
+function updateAdminCartItem(medicineId, delta) {
+  const itemIndex = adminCart.findIndex((entry) => entry.id === Number(medicineId));
+  if (itemIndex === -1) return;
+
+  const item = adminCart[itemIndex];
+  const medicine = medicines.find((entry) => entry.id === item.id);
+  const nextQty = item.qty + delta;
+
+  if (nextQty <= 0) {
+    adminCart.splice(itemIndex, 1);
+    renderAdminCart();
+    return;
+  }
+
+  if (medicine && nextQty > Number(medicine.stock || 0)) {
+    alert(`Stok untuk ${medicine.name} hanya tersisa ${medicine.stock}.`);
+    return;
+  }
+
+  item.qty = nextQty;
+  renderAdminCart();
+}
+
+function clearAdminCart() {
+  adminCart = [];
+  renderAdminCart();
+}
+
 function renderSalesProducts() {
   const list = document.getElementById("salesProductList");
   if (!list) return;
@@ -824,6 +923,8 @@ function renderSalesProducts() {
 }
 
 function renderSaleOptions() {
+  if (!saleMedicineSelect) return;
+
   saleMedicineSelect.innerHTML = medicines
     .map((item) => `<option value="${item.id}">${item.name} • ${item.stock} pcs</option>`)
     .join("");
@@ -1168,40 +1269,94 @@ function handleSaleSubmit(event) {
     return;
   }
 
-  const medicineId = Number(saleMedicineSelect.value);
-  const medicine = medicines.find((item) => item.id === medicineId);
-  const qty = Number(saleQuantity.value);
   const paymentMethod = salePaymentMethod ? salePaymentMethod.value : "Cash";
-
-  if (!medicine) {
-    alert("Obat tidak ditemukan.");
-    return;
-  }
-
-  if (!Number.isFinite(qty) || qty <= 0) {
-    alert("Jumlah harus lebih dari 0.");
-    return;
-  }
-
-  if (qty > medicine.stock) {
-    alert(`Stok tidak cukup. Sisa stok: ${medicine.stock}`);
-    return;
-  }
-
-  medicine.stock = Math.max(0, medicine.stock - qty);
-  medicine.status = recalcStatus(medicine.stock);
-
   const customer = customerName.value.trim() || "Umum";
-  const total = medicine.price * qty;
+  const customerPhoneValue = customerPhone ? customerPhone.value.trim() : "";
+  const customerLabel = customerPhoneValue ? `${customer} (${customerPhoneValue})` : customer;
+
+  const saleEntries = adminCart.length
+    ? adminCart.map((item) => ({
+        id: item.id,
+        name: item.name,
+        qty: Number(item.qty) || 0,
+        price: Number(item.price) || 0,
+        expiry: item.expiry,
+      }))
+    : (() => {
+        if (!saleMedicineSelect || !saleQuantity) {
+          alert("Tambah obat terlebih dahulu dari katalog di sebelah kiri.");
+          return [];
+        }
+
+        const medicineId = Number(saleMedicineSelect.value);
+        const medicine = medicines.find((item) => item.id === medicineId);
+        const qty = Number(saleQuantity.value);
+
+        if (!medicine) {
+          alert("Obat tidak ditemukan.");
+          return [];
+        }
+
+        if (!Number.isFinite(qty) || qty <= 0) {
+          alert("Jumlah harus lebih dari 0.");
+          return [];
+        }
+
+        if (qty > medicine.stock) {
+          alert(`Stok tidak cukup. Sisa stok: ${medicine.stock}`);
+          return [];
+        }
+
+        return [{ id: medicine.id, name: medicine.name, qty, price: medicine.price, expiry: medicine.expiry }];
+      })();
+
+  const validEntries = saleEntries.filter((entry) => entry && Number(entry.qty) > 0);
+  if (!validEntries.length) {
+    alert("Keranjang transaksi masih kosong.");
+    return;
+  }
+
+  const invalidStock = validEntries.find((entry) => {
+    const medicine = medicines.find((item) => item.id === entry.id);
+    return medicine && Number(entry.qty) > Number(medicine.stock || 0);
+  });
+
+  if (invalidStock) {
+    alert(`Stok tidak cukup untuk ${invalidStock.name}.`);
+    return;
+  }
+
+  validEntries.forEach((entry) => {
+    const medicine = medicines.find((item) => item.id === entry.id);
+    if (!medicine) return;
+
+    medicine.stock = Math.max(0, Number(medicine.stock || 0) - Number(entry.qty));
+    medicine.status = recalcStatus(medicine.stock);
+    addInventoryLog("out", medicine.name, Number(entry.qty), `Penjualan offline ke ${customerLabel} via ${paymentMethod}`);
+  });
+
+  const items = validEntries.map((entry) => {
+    const subtotal = Number(entry.qty) * Number(entry.price);
+    return {
+      name: entry.name,
+      qty: Number(entry.qty),
+      unitPrice: Number(entry.price),
+      expiry: entry.expiry,
+      subtotal,
+    };
+  });
+
+  const total = items.reduce((sum, item) => sum + item.subtotal, 0);
   const newSale = {
     id: `TRX-${Date.now().toString().slice(-6)}`,
     date: new Date().toISOString().slice(0, 10),
-    customer,
+    customer: customerLabel,
+    phone: customerPhoneValue,
     total,
     shippingMethod: "Offline",
     paymentMethod,
     deliveryAddress: "Pembelian langsung di toko",
-    items: [{ name: medicine.name, qty, unitPrice: medicine.price, expiry: medicine.expiry, subtotal: total }],
+    items,
     status: "Sudah Dibayar",
     paymentStatus: "Lunas",
     deliveryStatus: "Selesai",
@@ -1209,7 +1364,10 @@ function handleSaleSubmit(event) {
 
   transactions.unshift(newSale);
   currentReceipt = newSale;
-  addInventoryLog("out", medicine.name, qty, `Penjualan offline ke ${customer} via ${paymentMethod}`);
+  if (adminCart.length) {
+    adminCart = [];
+  }
+
   saveState(STORAGE_KEYS.medicines, medicines);
   saveState(STORAGE_KEYS.sales, transactions);
   renderAll();
@@ -1217,7 +1375,12 @@ function handleSaleSubmit(event) {
   openReceiptModal(newSale);
 
   saleForm.reset();
-  saleQuantity.value = 1;
+  if (customerPhone) {
+    customerPhone.value = "";
+  }
+  if (saleQuantity) {
+    saleQuantity.value = 1;
+  }
   if (salePaymentMethod) {
     salePaymentMethod.value = "Cash";
   }
@@ -1319,6 +1482,7 @@ function renderAll() {
   renderSalesHistory();
   renderSalesProducts();
   renderSaleOptions();
+  renderAdminCart();
   renderCustomerProducts();
   renderCustomerCart();
   renderCustomerPurchaseHistory();
@@ -1383,7 +1547,9 @@ restockBtn.addEventListener("click", handleRestock);
 saleBtn.addEventListener("click", () => {
   const medicine = chooseMedicineFromPrompt("Pilih obat yang terjual");
   if (medicine) {
-    saleMedicineSelect.value = String(medicine.id);
+    if (saleMedicineSelect) {
+      saleMedicineSelect.value = String(medicine.id);
+    }
     showView("sales");
   }
 });
@@ -1409,12 +1575,32 @@ if (salesProductList) {
     const selectedId = Number(btn.dataset.saleProduct);
     const medicine = medicines.find((item) => item.id === selectedId);
     if (!medicine) return;
-    saleMedicineSelect.value = String(selectedId);
+
     if (saleQuantity) {
+      saleQuantity.value = String(Math.max(1, Number(saleQuantity.value) || 1));
       saleQuantity.focus();
       saleQuantity.select();
     }
+
+    addAdminCartItem(selectedId, Number(saleQuantity?.value) || 1);
+    if (saleMedicineSelect) {
+      saleMedicineSelect.value = String(selectedId);
+    }
   });
+}
+
+if (adminCartList) {
+  adminCartList.addEventListener("click", (event) => {
+    const btn = event.target.closest("[data-admin-cart-action]");
+    if (!btn) return;
+
+    const delta = btn.dataset.adminCartAction === "increase" ? 1 : -1;
+    updateAdminCartItem(btn.dataset.id, delta);
+  });
+}
+
+if (clearSaleCartBtn) {
+  clearSaleCartBtn.addEventListener("click", clearAdminCart);
 }
 
 customerCartItems.addEventListener("click", (event) => {
